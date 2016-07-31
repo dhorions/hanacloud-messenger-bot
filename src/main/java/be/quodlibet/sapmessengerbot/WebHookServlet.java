@@ -19,8 +19,8 @@ public class WebHookServlet extends HttpServlet
 {
 
     //TODO : check why vm parameters from hcp are not accessible this way
-    private final String VALIDATION_TOKEN = (System.getenv("VALIDATION_TOKEN") == null) ? "swordfish" : System.getenv("VALIDATION_TOKEN");
-    private final String PAGE_ACCESS_TOKEN = (System.getenv("PAGE_ACCESS_TOKEN") == null) ? "EAAOXlscoeoUBADZACITQiKmQi6EABQfy6U1iOsHj9xqy4ZA7NFQYOeVC7XZCP867drPqs2h8fJJgaLZAKwfLbYNo5NjiV0KTHZAB5ZAIkNoHJsNHzz5JUZA0plIDq8xTD4ZAEckERkWYXeJAQ6KMNjwl1TRW1w0ZCuLGww9mVZCar2ZCgZDZD" : System.getenv("PAGE_ACCESS_TOKEN");
+    private final String VALIDATION_TOKEN = (System.getProperty("VALIDATION_TOKEN") == null) ? "swordfish" : System.getProperty("VALIDATION_TOKEN");
+    private final String PAGE_ACCESS_TOKEN = (System.getProperty("PAGE_ACCESS_TOKEN") == null) ? "UNKNOWN" : System.getProperty("PAGE_ACCESS_TOKEN");
 
 
     Logger logger = LoggerFactory.getLogger(WebHookServlet.class);
@@ -62,16 +62,21 @@ public class WebHookServlet extends HttpServlet
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException
     {
-        logger.info("Environment Variable ENVVAR1 = " + System.getenv("ENVVAR1"));
         logger.debug("Page Access token = " + PAGE_ACCESS_TOKEN);
         JSONObject message = getRequestBodyJson(request);
         logger.debug("Incoming Message :");
         logger.debug(message.toString(2));
-        String textMessage = message.getJSONArray("entry").getJSONObject(0).getJSONArray("messaging").getJSONObject(0).getJSONObject("message").getString("text");
-        String sender = message.getJSONArray("entry").getJSONObject(0).getJSONArray("messaging").getJSONObject(0).getJSONObject("sender").getString("id");
-        //Simply send the user back what he said
-        sendAPI.sendTextMessage("You said : " + textMessage, sender, PAGE_ACCESS_TOKEN);
-        response.setStatus(200);
+        JSONObject entry = message.getJSONArray("entry").getJSONObject(0);
+        for (Object messaging : entry.getJSONArray("messaging")) {
+            JSONObject m = (JSONObject) messaging;
+            String sender = m.getJSONObject("sender").getString("id");
+            if (m.has("message")) {
+                //We received a text message
+                String textMessage = m.getJSONObject("message").getString("text");
+                sendAPI.sendTextMessage("You said : " + textMessage, sender, PAGE_ACCESS_TOKEN);
+            }
+        }
+       response.setStatus(200);
 
     }
 
